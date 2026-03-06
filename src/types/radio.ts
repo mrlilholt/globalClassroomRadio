@@ -1,4 +1,4 @@
-export type StationSource = "radio-browser" | "iprd" | "iptv-org";
+export type StationSource = "radio-browser" | "iprd" | "iptv-org" | "curated";
 
 export type StationStreamType = "audio-native" | "hls" | "video" | "unknown";
 

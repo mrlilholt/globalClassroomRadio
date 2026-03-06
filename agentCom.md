@@ -337,6 +337,7 @@ Source policy for CR3:
   1. Radio Browser API (existing primary source)
   2. IPRD catalog/data files (supplemental source)
   3. IPTV-Org public catalog (targeted fallback dataset for kid-category language coverage when radio directories are sparse)
+  4. PM-approved curated station seed list (manual fallback for known reliable kid-safe streams when automated sources fail quality/playability)
 - Any additional source must be documented with:
   - pricing/auth model
   - CORS/browser feasibility

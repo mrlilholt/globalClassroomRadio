@@ -1,6 +1,7 @@
 import { SAFE_TAGS } from "../constants/safeTags";
 import type { RadioStation, StationQuery } from "../types/radio";
 import { canonicalizeSafeTag, tokenizeCsv } from "./filterEngine";
+import { listCuratedKidStations, type CuratedLanguageProfile } from "./curatedStationClient";
 import { listIprdCountryStations } from "./iprdClient";
 import { listIptvOrgKidStations } from "./iptvOrgClient";
 import { detectStreamCompatibility } from "./streamCompatibility";
@@ -107,6 +108,7 @@ const SAFE_TAG_STRATEGY_VERSION = "safe-v3";
 
 const stationCache = new Map<string, StationCacheEntry>();
 const inflightByKey = new Map<string, Promise<RadioStation[]>>();
+const STREAM_EXCLUSION_KEYWORDS = ["beep", "tone", "1khz", "test tone", "test signal", "sine", "silence"];
 
 interface TargetLanguageProfile {
   id: "uzbek" | "russian" | "ukrainian" | "tajik" | "portuguese";
@@ -401,10 +403,19 @@ function toStationDedupeKey(station: RadioStation): string {
   ].join("|");
 }
 
+function shouldExcludeStation(station: RadioStation): boolean {
+  const combinedText = `${station.name} ${station.tags} ${station.urlResolved}`.toLowerCase();
+  return STREAM_EXCLUSION_KEYWORDS.some((keyword) => combinedText.includes(keyword));
+}
+
 function mergeStationsByDedupe(target: Map<string, RadioStation>, sourceStations: RadioStation[]): void {
   for (const station of sourceStations) {
     if (target.size >= MAX_STATION_POOL) {
       return;
+    }
+
+    if (shouldExcludeStation(station)) {
+      continue;
     }
 
     const dedupeKey = toStationDedupeKey(station);
@@ -416,7 +427,8 @@ function mergeStationsByDedupe(target: Map<string, RadioStation>, sourceStations
 
     const shouldReplace =
       (!existingStation.audioCompatible && station.audioCompatible) ||
-      (existingStation.streamType !== "audio-native" && station.streamType === "audio-native");
+      (existingStation.streamType !== "audio-native" && station.streamType === "audio-native") ||
+      (existingStation.source !== "curated" && station.source === "curated");
     if (shouldReplace) {
       target.set(dedupeKey, station);
     }
@@ -752,6 +764,20 @@ export class RadioBrowserStationService implements StationService {
       } catch (error) {
         supplementalFailedWindowCount += 1;
         console.warn(`IPTV-Org fallback fetch failed for profile '${targetProfile.id}'`, error);
+      }
+    }
+
+    if (Boolean(query.safeOnly) && targetProfile && dedupedStations.size < MAX_STATION_POOL) {
+      supplementalWindowCount += 1;
+
+      try {
+        const curatedStations = listCuratedKidStations(targetProfile.id as CuratedLanguageProfile, {
+          countryCodes: supplementalCountryCodes
+        });
+        mergeStationsByDedupe(dedupedStations, curatedStations);
+      } catch (error) {
+        supplementalFailedWindowCount += 1;
+        console.warn(`Curated fallback merge failed for profile '${targetProfile.id}'`, error);
       }
     }
 
