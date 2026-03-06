@@ -1,6 +1,9 @@
 import { SAFE_TAG_ALIASES, SAFE_TAGS, type SafeTag } from "../constants/safeTags";
 import type { RadioStation, StationFilters } from "../types/radio";
 
+const TARGET_LANGUAGE_FILTER_SEEDS = ["Uzbek", "Russian", "Ukrainian", "Tajik", "Portuguese"] as const;
+const TARGET_COUNTRY_FILTER_SEEDS = ["Uzbekistan", "Russia", "Ukraine", "Tajikistan", "Portugal"] as const;
+
 function normalizeToken(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -91,8 +94,8 @@ function dedupeSorted(values: string[]): string[] {
 }
 
 export function getStationFilterOptions(stations: RadioStation[]): StationFilterOptions {
-  const countries = dedupeSorted(stations.map((station) => station.country.trim()));
-  const languages = dedupeSorted(stations.map((station) => station.language.trim()));
+  const countries = dedupeSorted([...TARGET_COUNTRY_FILTER_SEEDS, ...stations.map((station) => station.country.trim())]);
+  const languages = dedupeSorted([...TARGET_LANGUAGE_FILTER_SEEDS, ...stations.map((station) => station.language.trim())]);
   const tags = dedupeSorted(stations.flatMap((station) => tokenizeCsv(station.tags)));
 
   return {
