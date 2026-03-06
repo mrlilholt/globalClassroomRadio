@@ -482,6 +482,12 @@ body {
   background: #e8f7ef;
 }
 
+.station-flag-hls {
+  color: #1f3f84;
+  border-color: #9fc0f5;
+  background: #e7f0ff;
+}
+
 .station-flag-blocked {
   color: #7c2d12;
   border-color: #f8c8aa;

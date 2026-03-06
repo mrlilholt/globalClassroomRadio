@@ -15,6 +15,10 @@ function formatTag(tag: string): string {
     .join(" ");
 }
 
+function isPreviewCompatible(station: { audioCompatible: boolean; streamType: string }): boolean {
+  return station.audioCompatible || station.streamType === "hls";
+}
+
 type CoverageStatus = "idle" | "loading" | "partial" | "complete" | "error";
 
 type CR3LanguagePath = "uzbek" | "russian" | "ukrainian";
@@ -225,8 +229,10 @@ export function StationDiscoveryPanel() {
     const safeFiltered = filterStationsBySafety(queryFiltered, safeOnly);
 
     return [...safeFiltered].sort((left, right) => {
-      if (left.audioCompatible !== right.audioCompatible) {
-        return left.audioCompatible ? -1 : 1;
+      const leftCompatible = isPreviewCompatible(left);
+      const rightCompatible = isPreviewCompatible(right);
+      if (leftCompatible !== rightCompatible) {
+        return leftCompatible ? -1 : 1;
       }
 
       return left.name.localeCompare(right.name);
@@ -307,8 +313,9 @@ export function StationDiscoveryPanel() {
               whitelistIds,
               discoveryInteraction: true
             });
-            const canPreview = selectionPolicy.allowed && station.audioCompatible;
-            const canWhitelist = selectionPolicy.allowed && station.audioCompatible;
+            const previewCompatible = isPreviewCompatible(station);
+            const canPreview = selectionPolicy.allowed && previewCompatible;
+            const canWhitelist = selectionPolicy.allowed && previewCompatible;
 
             return (
               <li
@@ -321,13 +328,24 @@ export function StationDiscoveryPanel() {
                 </p>
                 <ul className="station-flag-list" aria-label={`${station.name} source and compatibility`}>
                   <li className="station-flag station-flag-source">{station.source}</li>
-                  <li className={`station-flag ${station.audioCompatible ? "station-flag-audio" : "station-flag-blocked"}`}>
-                    {station.audioCompatible ? "Audio compatible" : `Not supported (${station.streamType})`}
+                  <li
+                    className={`station-flag ${
+                      station.audioCompatible ? "station-flag-audio" : station.streamType === "hls" ? "station-flag-hls" : "station-flag-blocked"
+                    }`}
+                  >
+                    {station.audioCompatible
+                      ? "Audio compatible"
+                      : station.streamType === "hls"
+                        ? "HLS stream"
+                        : `Not supported (${station.streamType})`}
                   </li>
                   {station.supplemental ? <li className="station-flag station-flag-supplemental">Supplemental</li> : null}
                 </ul>
-                {!station.audioCompatible ? (
-                  <p className="hint-text">This stream is video/HLS and is hidden from player controls by default.</p>
+                {!station.audioCompatible && station.streamType !== "hls" ? (
+                  <p className="hint-text">This stream type cannot be previewed in the current player.</p>
+                ) : null}
+                {!station.audioCompatible && station.streamType === "hls" ? (
+                  <p className="hint-text">HLS playback support depends on browser capabilities.</p>
                 ) : null}
                 <ul className="station-tag-list" aria-label={`${station.name} tags`}>
                   {tokenizeCsv(station.tags).map((tag) => (
@@ -344,7 +362,7 @@ export function StationDiscoveryPanel() {
                       dispatch({ type: "SET_SELECTED_STATION", stationId: station.stationuuid });
                     }}
                   >
-                    {!station.audioCompatible ? "Preview unavailable" : isSelected ? "Selected for preview" : "Select for preview"}
+                    {!previewCompatible ? "Preview unavailable" : isSelected ? "Selected for preview" : "Select for preview"}
                   </button>
                   <button
                     type="button"
@@ -360,7 +378,7 @@ export function StationDiscoveryPanel() {
                       });
                     }}
                   >
-                    {!station.audioCompatible
+                    {!previewCompatible
                       ? "Cannot whitelist (unplayable)"
                       : isWhitelisted
                         ? "Saved to whitelist"

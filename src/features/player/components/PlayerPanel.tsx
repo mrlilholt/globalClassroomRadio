@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState } from "../../../state/AppStateProvider";
 import { canPlayStation } from "../../../services/classroomGuard";
+import type { RadioStation } from "../../../types/radio";
 
 type PlaybackStatus = "idle" | "ready" | "loading" | "playing" | "stopped" | "error";
+
+function isStationPreviewCompatible(station: RadioStation): boolean {
+  return station.audioCompatible || station.streamType === "hls";
+}
 
 function toPlaybackErrorMessage(error: unknown): string {
   if (error instanceof DOMException) {
@@ -44,7 +49,6 @@ export function PlayerPanel() {
     () => stations.find((station) => station.stationuuid === selectedStationId) ?? null,
     [selectedStationId, stations]
   );
-  const isAudioCompatible = selectedStation?.audioCompatible ?? false;
   const isSelectionPlayable = selectedStationId
     ? canPlayStation({
         stationId: selectedStationId,
@@ -52,45 +56,132 @@ export function PlayerPanel() {
         whitelistIds
       })
     : false;
-  const canAttemptPlayback = Boolean(selectedStation) && isSelectionPlayable && isAudioCompatible;
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const isSelectionStreamSupported = selectedStation ? isStationPreviewCompatible(selectedStation) : false;
+  const canAttemptPlayback = Boolean(selectedStation) && isSelectionPlayable && isSelectionStreamSupported;
+  const mediaRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<any>(null);
   const [playbackStatus, setPlaybackStatus] = useState<PlaybackStatus>("idle");
   const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) {
+    const media = mediaRef.current;
+    if (!media) {
       return;
     }
 
+    const disposeHls = () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+
     if (!selectedStation) {
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
+      disposeHls();
+      media.pause();
+      media.removeAttribute("src");
+      media.load();
       setPlaybackStatus("idle");
       setPlaybackError(null);
       return;
     }
 
-    if (!isAudioCompatible) {
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
+    if (!isSelectionStreamSupported) {
+      disposeHls();
+      media.pause();
+      media.removeAttribute("src");
+      media.load();
       setPlaybackStatus("stopped");
-      setPlaybackError("This station uses a video/HLS stream and cannot be previewed in the audio player.");
+      setPlaybackError(`This station cannot be previewed because its stream type is '${selectedStation.streamType}'.`);
       return;
     }
 
-    audio.pause();
-    audio.src = selectedStation.urlResolved;
-    audio.load();
-    setPlaybackStatus("ready");
+    disposeHls();
+    media.pause();
+    media.removeAttribute("src");
+    media.load();
     setPlaybackError(null);
-  }, [isAudioCompatible, selectedStation]);
+
+    const loadDirectSource = () => {
+      media.src = selectedStation.urlResolved;
+      media.load();
+      setPlaybackStatus("ready");
+    };
+
+    if (selectedStation.streamType !== "hls") {
+      loadDirectSource();
+      return;
+    }
+
+    if (media.canPlayType("application/vnd.apple.mpegurl")) {
+      loadDirectSource();
+      return;
+    }
+
+    let isDisposed = false;
+    setPlaybackStatus("loading");
+
+    void import("hls.js")
+      .then(({ default: Hls }) => {
+        if (isDisposed) {
+          return;
+        }
+
+        if (!Hls.isSupported()) {
+          setPlaybackStatus("error");
+          setPlaybackError("This browser cannot play HLS streams for this station.");
+          return;
+        }
+
+        const hls = new Hls({ enableWorker: true });
+        hlsRef.current = hls;
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setPlaybackStatus("ready");
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) {
+            return;
+          }
+
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              if (hlsRef.current === hls) {
+                hlsRef.current = null;
+              }
+              setPlaybackStatus("error");
+              setPlaybackError("HLS stream could not be initialized.");
+          }
+        });
+
+        hls.loadSource(selectedStation.urlResolved);
+        hls.attachMedia(media);
+      })
+      .catch(() => {
+        if (isDisposed) {
+          return;
+        }
+
+        setPlaybackStatus("error");
+        setPlaybackError("HLS playback engine failed to load.");
+      });
+
+    return () => {
+      isDisposed = true;
+      disposeHls();
+    };
+  }, [isSelectionStreamSupported, selectedStation]);
 
   const handlePlay = async () => {
-    const audio = audioRef.current;
-    if (!audio || !selectedStation || !canAttemptPlayback) {
+    const media = mediaRef.current;
+    if (!media || !selectedStation || !canAttemptPlayback) {
       return;
     }
 
@@ -98,7 +189,7 @@ export function PlayerPanel() {
     setPlaybackError(null);
 
     try {
-      await audio.play();
+      await media.play();
     } catch (error: unknown) {
       setPlaybackStatus("error");
       setPlaybackError(toPlaybackErrorMessage(error));
@@ -106,13 +197,13 @@ export function PlayerPanel() {
   };
 
   const handleStop = () => {
-    const audio = audioRef.current;
-    if (!audio) {
+    const media = mediaRef.current;
+    if (!media) {
       return;
     }
 
-    audio.pause();
-    audio.currentTime = 0;
+    media.pause();
+    media.currentTime = 0;
     setPlaybackStatus(selectedStation ? "stopped" : "idle");
   };
 
@@ -121,8 +212,8 @@ export function PlayerPanel() {
       return "Select a station in discovery to start preview.";
     }
 
-    if (!isAudioCompatible) {
-      return "Selected stream is not audio-compatible.";
+    if (!isSelectionStreamSupported) {
+      return "Selected stream is not supported by the player.";
     }
 
     if (!isSelectionPlayable) {
@@ -131,7 +222,7 @@ export function PlayerPanel() {
 
     switch (playbackStatus) {
       case "ready":
-        return "Ready to play.";
+        return selectedStation.streamType === "hls" ? "Ready to play (HLS)." : "Ready to play.";
       case "loading":
         return "Connecting to stream...";
       case "playing":
@@ -150,7 +241,7 @@ export function PlayerPanel() {
       return "status-pill-neutral";
     }
 
-    if (!isAudioCompatible || !isSelectionPlayable || playbackStatus === "error") {
+    if (!isSelectionStreamSupported || !isSelectionPlayable || playbackStatus === "error") {
       return "status-pill-warning";
     }
 
@@ -202,7 +293,10 @@ export function PlayerPanel() {
             </div>
           </div>
         </div>
-        {selectedStation && !isAudioCompatible ? (
+        {selectedStation && selectedStation.streamType === "hls" ? (
+          <p className="hint-text">HLS stream selected. Playback quality and support can vary by browser.</p>
+        ) : null}
+        {selectedStation && !isSelectionStreamSupported ? (
           <p className="warning-text">
             This station cannot be previewed because its stream type is <strong>{selectedStation.streamType}</strong>.
           </p>
@@ -217,9 +311,11 @@ export function PlayerPanel() {
         ) : null}
       </div>
 
-      <audio
-        ref={audioRef}
+      <video
+        ref={mediaRef}
         preload="none"
+        playsInline
+        className="sr-only"
         onPlaying={() => {
           setPlaybackStatus("playing");
           setPlaybackError(null);
@@ -231,9 +327,9 @@ export function PlayerPanel() {
           setPlaybackStatus("stopped");
         }}
         onError={() => {
-          const audio = audioRef.current;
+          const media = mediaRef.current;
           setPlaybackStatus("error");
-          setPlaybackError(readMediaErrorMessage(audio?.error ?? null));
+          setPlaybackError(readMediaErrorMessage(media?.error ?? null));
         }}
       />
     </section>
