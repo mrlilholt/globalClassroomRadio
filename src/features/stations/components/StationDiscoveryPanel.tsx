@@ -16,7 +16,7 @@ function formatTag(tag: string): string {
 }
 
 function isPreviewCompatible(station: { audioCompatible: boolean; streamType: string }): boolean {
-  return station.audioCompatible || station.streamType === "hls";
+  return station.audioCompatible || station.streamType === "hls" || station.streamType === "video";
 }
 
 type CoverageStatus = "idle" | "loading" | "partial" | "complete" | "error";
@@ -366,22 +366,33 @@ export function StationDiscoveryPanel() {
                   <li className="station-flag station-flag-source">{station.source}</li>
                   <li
                     className={`station-flag ${
-                      station.audioCompatible ? "station-flag-audio" : station.streamType === "hls" ? "station-flag-hls" : "station-flag-blocked"
+                      station.audioCompatible
+                        ? "station-flag-audio"
+                        : station.streamType === "hls"
+                          ? "station-flag-hls"
+                          : station.streamType === "video"
+                            ? "station-flag-video"
+                            : "station-flag-blocked"
                     }`}
                   >
                     {station.audioCompatible
                       ? "Audio compatible"
                       : station.streamType === "hls"
                         ? "HLS stream"
+                        : station.streamType === "video"
+                          ? "Video stream"
                         : `Not supported (${station.streamType})`}
                   </li>
                   {station.supplemental ? <li className="station-flag station-flag-supplemental">Supplemental</li> : null}
                 </ul>
-                {!station.audioCompatible && station.streamType !== "hls" ? (
+                {!station.audioCompatible && station.streamType !== "hls" && station.streamType !== "video" ? (
                   <p className="hint-text">This stream type cannot be previewed in the current player.</p>
                 ) : null}
                 {!station.audioCompatible && station.streamType === "hls" ? (
                   <p className="hint-text">HLS playback support depends on browser capabilities.</p>
+                ) : null}
+                {!station.audioCompatible && station.streamType === "video" ? (
+                  <p className="hint-text">Video stream selected. Preview plays audio-only in the dock player.</p>
                 ) : null}
                 <ul className="station-tag-list" aria-label={`${station.name} tags`}>
                   {tokenizeCsv(station.tags).map((tag) => (

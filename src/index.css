@@ -488,6 +488,12 @@ body {
   background: #e7f0ff;
 }
 
+.station-flag-video {
+  color: #4b2e83;
+  border-color: #cdb8ef;
+  background: #f1eaff;
+}
+
 .station-flag-blocked {
   color: #7c2d12;
   border-color: #f8c8aa;

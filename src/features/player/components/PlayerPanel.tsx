@@ -6,7 +6,7 @@ import type { RadioStation } from "../../../types/radio";
 type PlaybackStatus = "idle" | "ready" | "loading" | "playing" | "stopped" | "error";
 
 function isStationPreviewCompatible(station: RadioStation): boolean {
-  return station.audioCompatible || station.streamType === "hls";
+  return station.audioCompatible || station.streamType === "hls" || station.streamType === "video";
 }
 
 function toPlaybackErrorMessage(error: unknown): string {
@@ -295,6 +295,9 @@ export function PlayerPanel() {
         </div>
         {selectedStation && selectedStation.streamType === "hls" ? (
           <p className="hint-text">HLS stream selected. Playback quality and support can vary by browser.</p>
+        ) : null}
+        {selectedStation && selectedStation.streamType === "video" ? (
+          <p className="hint-text">Video stream selected. Audio will play in the dock player.</p>
         ) : null}
         {selectedStation && !isSelectionStreamSupported ? (
           <p className="warning-text">
