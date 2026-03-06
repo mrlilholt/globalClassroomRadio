@@ -320,6 +320,8 @@ Objective:
   - Uzbek
   - Russian
   - Ukrainian
+  - Tajik
+  - Portuguese (Portugal)
 - Expand retrieval and safety logic using free-access sources and multilingual kid-safe tags.
 
 Constraint:
@@ -350,6 +352,8 @@ Localized kid-safe strategy requirement:
   - Russian: `дети`, `детский`, `для детей`, `семейный`, `образование`, `классическая`, `народная`, `колыбельные`
   - Ukrainian: `діти`, `дитячий`, `для дітей`, `сімейний`, `освіта`, `класична`, `народна`, `колискові`
   - Uzbek: `bolalar`, `bolalar uchun`, `oila`, `ta'lim`, `klassik`, `xalq`, `alla`, plus Cyrillic equivalents when present
+  - Tajik: `кӯдакон`, `бачагон`, `барои кӯдакон`, `оилавӣ`, `маориф`, `классикӣ`, `халқӣ`, `алла`
+  - Portuguese: `crianças`, `infantil`, `para crianças`, `família`, `educação`, `clássica`, `folclore`, `canções de ninar`
 
 PM dispatch order for CR3:
 1. DATA (research phase)
@@ -381,6 +385,10 @@ PM dispatch order for CR3:
   - `language=Uzbek + safe-only`
   - `language=Russian + safe-only`
   - `language=Ukrainian + safe-only`
+  - `language=Tajik + safe-only`
+  - `language=Portuguese + safe-only`
+  - `country=Tajikistan + safe-only`
+  - `country=Portugal + safe-only`
   - regression: classroom mode, whitelist persistence, player behavior
 
 Required response format (all CR3 dispatches):

@@ -23,7 +23,7 @@ When classroom mode is enabled, playback is restricted to approved stations only
 Implemented now:
 - App shell and state container (`src/app`, `src/state`)
 - Station discovery via `RadioBrowserStationService` with endpoint failover
-- Supplemental Uzbek discovery merge path from IPRD country feed for Uzbek-focused queries
+- Supplemental targeted discovery merge paths from IPRD country feeds for Uzbek/Russian/Ukrainian/Tajik/Portugal-focused queries
 - Filters for country/language/tags with dynamic updates
 - Safe-only tag toggle using canonical safe tags plus multilingual variants (Uzbek/Russian/Ukrainian) and Unicode-safe normalization
 - HTML5 audio preview controls with single active player behavior and persistent bottom dock placement

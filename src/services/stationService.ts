@@ -109,7 +109,7 @@ const stationCache = new Map<string, StationCacheEntry>();
 const inflightByKey = new Map<string, Promise<RadioStation[]>>();
 
 interface TargetLanguageProfile {
-  id: "uzbek" | "russian" | "ukrainian";
+  id: "uzbek" | "russian" | "ukrainian" | "tajik" | "portuguese";
   displayLanguage: string;
   languageTerms: readonly string[];
   countryTerms: readonly string[];
@@ -178,6 +178,55 @@ const TARGET_LANGUAGE_PROFILES: readonly TargetLanguageProfile[] = [
       "\u043a\u043e\u043b\u0438\u0441\u043a\u043e\u0432\u0456"
     ],
     supplementalCountryCodes: ["ua"]
+  },
+  {
+    id: "tajik",
+    displayLanguage: "Tajik",
+    languageTerms: ["tajik", "tg", "тоҷикӣ", "точики", "таджикский", "таҷикӣ"],
+    countryTerms: ["tajikistan", "tj", "тоҷикистон", "таджикистан"],
+    radioBrowserLanguage: "tajik",
+    localizedSafeTags: [
+      "кӯдакон",
+      "кудакон",
+      "бачагон",
+      "бачагона",
+      "барои кӯдакон",
+      "барои кудакон",
+      "оилавӣ",
+      "оилави",
+      "маориф",
+      "таълим",
+      "классикӣ",
+      "халқӣ",
+      "алла"
+    ],
+    supplementalCountryCodes: ["tj"]
+  },
+  {
+    id: "portuguese",
+    displayLanguage: "Portuguese",
+    languageTerms: ["portuguese", "português", "portugues", "pt"],
+    countryTerms: ["portugal", "pt"],
+    radioBrowserLanguage: "portuguese",
+    localizedSafeTags: [
+      "crianças",
+      "criancas",
+      "criança",
+      "crianca",
+      "infantil",
+      "infanto juvenil",
+      "família",
+      "familia",
+      "familiar",
+      "educação",
+      "educacao",
+      "clássica",
+      "classica",
+      "folclore",
+      "canções de ninar",
+      "cancoes de ninar"
+    ],
+    supplementalCountryCodes: ["pt"]
   }
 ] as const;
 

@@ -21,7 +21,7 @@ function isPreviewCompatible(station: { audioCompatible: boolean; streamType: st
 
 type CoverageStatus = "idle" | "loading" | "partial" | "complete" | "error";
 
-type CR3LanguagePath = "uzbek" | "russian" | "ukrainian";
+type CR3LanguagePath = "uzbek" | "russian" | "ukrainian" | "tajik" | "portuguese";
 
 interface CR3LanguageCopy {
   loading: string;
@@ -56,24 +56,57 @@ const CR3_LANGUAGE_COPY: Record<CR3LanguagePath, CR3LanguageCopy> = {
     complete: "Ukrainian safe-only coverage loaded",
     emptyTitle: "No Ukrainian kid-safe stations match the current filters.",
     emptyHint: "Try removing extra tags, clearing country, or turning off safe-only to compare broader Ukrainian results."
+  },
+  tajik: {
+    loading: "Expanding Tajik safe-only coverage...",
+    error: "Could not refresh Tajik safe-only coverage. Showing last available results if any.",
+    partial: "Tajik safe-only coverage is partial",
+    complete: "Tajik safe-only coverage loaded",
+    emptyTitle: "No Tajik kid-safe stations match the current filters.",
+    emptyHint: "Try removing extra tags, clearing country, or turning off safe-only to compare broader Tajik results."
+  },
+  portuguese: {
+    loading: "Expanding Portuguese safe-only coverage...",
+    error: "Could not refresh Portuguese safe-only coverage. Showing last available results if any.",
+    partial: "Portuguese safe-only coverage is partial",
+    complete: "Portuguese safe-only coverage loaded",
+    emptyTitle: "No Portuguese kid-safe stations match the current filters.",
+    emptyHint: "Try removing extra tags, clearing country, or turning off safe-only to compare broader Portuguese results."
   }
 };
 
 const CR3_LANGUAGE_ALIASES: Record<CR3LanguagePath, string[]> = {
   uzbek: ["uzbek", "o'zbek", "o‘zbek", "узбек", "ӯзбек", "ўзбек"],
   russian: ["russian", "русский", "русская", "русский язык"],
-  ukrainian: ["ukrainian", "українська", "украинский", "українська мова"]
+  ukrainian: ["ukrainian", "українська", "украинский", "українська мова"],
+  tajik: ["tajik", "тоҷикӣ", "точики", "таджикский"],
+  portuguese: ["portuguese", "português", "portugues"]
 };
 
-function detectCR3LanguagePath(language: string | null, safeOnly: boolean): CR3LanguagePath | null {
-  if (!safeOnly || !language) {
+const CR3_COUNTRY_ALIASES: Record<CR3LanguagePath, string[]> = {
+  uzbek: ["uzbekistan", "uz", "ӯзбекистон", "узбекистан"],
+  russian: ["russia", "ru", "россия"],
+  ukrainian: ["ukraine", "ua", "україна", "украина"],
+  tajik: ["tajikistan", "tj", "тоҷикистон", "таджикистан"],
+  portuguese: ["portugal", "pt"]
+};
+
+function detectCR3LanguagePath(language: string | null, country: string | null, safeOnly: boolean): CR3LanguagePath | null {
+  if (!safeOnly) {
     return null;
   }
 
-  const normalizedLanguage = language.trim().toLowerCase();
+  const normalizedLanguage = language?.trim().toLowerCase() ?? "";
+  const normalizedCountry = country?.trim().toLowerCase() ?? "";
 
   for (const [path, aliases] of Object.entries(CR3_LANGUAGE_ALIASES) as [CR3LanguagePath, string[]][]) {
-    if (aliases.includes(normalizedLanguage)) {
+    if (normalizedLanguage && aliases.includes(normalizedLanguage)) {
+      return path;
+    }
+  }
+
+  for (const [path, aliases] of Object.entries(CR3_COUNTRY_ALIASES) as [CR3LanguagePath, string[]][]) {
+    if (normalizedCountry && aliases.includes(normalizedCountry)) {
       return path;
     }
   }
@@ -137,7 +170,10 @@ export function StationDiscoveryPanel() {
 
   const stationService = useMemo(() => new RadioBrowserStationService(), []);
   const discoveryDisabled = isDiscoveryDisabled(classroomMode);
-  const cr3LanguagePath = useMemo(() => detectCR3LanguagePath(filters.language, safeOnly), [filters.language, safeOnly]);
+  const cr3LanguagePath = useMemo(
+    () => detectCR3LanguagePath(filters.language, filters.country, safeOnly),
+    [filters.country, filters.language, safeOnly]
+  );
   const shouldForceRefresh = useMemo(() => Boolean(filters.language && safeOnly), [filters.language, safeOnly]);
   const stationQuery = useMemo(
     () => ({

@@ -14,7 +14,7 @@ Owner: DATA
 ## Fallback Strategy in Runtime
 
 1. Query Radio Browser windows first (multilingual safe-tag expansion where applicable).
-2. Merge IPRD country supplemental rows for target-language profiles (`uz`, `ru`, `ua`) when available.
+2. Merge IPRD country supplemental rows for target-language profiles (`uz`, `ru`, `ua`, `tj`, `pt`) when available.
 3. If safe-only target-language relevance remains sparse, fetch IPTV-Org kid-category fallback rows and merge/de-dupe.
 4. On supplemental source outage, log warning and continue with available sources (no hard failure).
 
